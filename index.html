@@ -149,7 +149,7 @@
             width: 100%;
             height: 140px; /* 從原本的 212px 縮減 */
             background-color: rgba(0,0,0,0.05);
-            background-size: cover;
+			background-size: cover;
             background-position: center;
             margin-bottom: 8px;
             border: 1px solid currentColor;
@@ -157,6 +157,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
+			box-shadow: none !important; /* 內部圖片不要有陰影 */
         }
 
         /* 內容容器：關鍵是讓文字區域有彈性 */
@@ -220,19 +221,46 @@
         .style-priest .card-inner { border: 1px solid rgba(0,0,0,0.2); height: 100%; box-shadow: inset 0 0 20px rgba(0,0,0,0.1); }
         .style-priest .card-title { font-weight: bold; text-align: center; letter-spacing: 0.2em; border-bottom: 2px solid #8b4513; margin-bottom: 10px; padding-bottom: 4px; }
 
-        /* 3. 李淳風: 中式水墨宣紙 */
-        .style-li {
-            background: #f4f1ea;
-            border: 2px solid #222;
-            color: #111;
-        }
-        .style-li .card-inner { 
-            border: 1px solid #222; height: 100%; padding: 8px;
-            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" opacity="0.05"><path d="M50 0 L100 50 L50 100 L0 50 Z" fill="black"/></svg>');
-        }
-        .style-li .card-title { font-family: 'Noto Serif TC'; font-weight: 900; writing-mode: vertical-rl; position: absolute; right: 10px; top: 20px; border-left: 1px solid #222; padding-left: 5px; height: 100px; }
-        .style-li .card-summary-box { padding-right: 30px; }
+		/* 3. 李淳風: 中式水墨宣紙 - 修正版：標題置中 */
+		.style-li {
+			background: #f4f1ea !important;
+			border: 2px solid #222;
+			color: #111 !important;
+		}
 
+		.style-li .card-inner { 
+			border: 1px solid #222; 
+			height: 100%; 
+			padding: 10px;
+			background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" opacity="0.03"><path d="M50 0 L100 50 L50 100 L0 50 Z" fill="black"/></svg>');
+			display: flex;
+			flex-direction: column;
+		}
+
+		/* 標題改為橫排、置中，位於圖片上方 */
+		.style-li .card-title { 
+			font-family: 'Noto Serif TC', serif; 
+			font-weight: 900; 
+			text-align: center;
+			border-bottom: 2px solid #222; 
+			margin-bottom: 8px; 
+			padding-bottom: 4px;
+			letter-spacing: 0.15em;
+			font-size: 14px;
+			position: static; /* 移除原本的 absolute */
+			height: auto;     /* 移除原本固定的 120px */
+			writing-mode: horizontal-tb; /* 確保為橫向 */
+		}
+
+		.style-li .card-summary-box { 
+			padding-right: 0; /* 移除原本為了避開右側直書標題的間距 */
+		}
+
+		/* 讓圖片區域也帶有一點水墨邊界感 */
+		.style-li #card-art-final {
+			border: 1px solid #444;
+			box-shadow: inset 0 0 10px rgba(0,0,0,0.1);
+		}
         /* 4. 先知: 賽博數位 */
         .style-oracle {
             background: #000;
@@ -311,7 +339,7 @@
                     </button>
                 </div>
                 <div class="text-center">
-                    <p id="load-status" class="text-[10px] text-yellow-600 uppercase tracking-widest">正在聯繫星際導師...</p>
+                    <p id="load-status" class="text-[10px] text-yellow-600 uppercase tracking-widest">招喚進行中...</p>
                 </div>
             </div>
 
@@ -372,7 +400,7 @@
                         </div>
                         <div id="persona-chat-container"></div>
                         <h4 id="input-prompt-title" class="text-lg text-yellow-500 mb-2 shrink-0 font-bold"></h4>
-                        <textarea id="user-input-text" class="w-full bg-transparent border-b border-yellow-900/50 focus:border-yellow-500 outline-none text-center text-base py-2 resize-none min-h-[80px] placeholder-yellow-900/30 text-yellow-100" placeholder="（請訴說您的疑惑...）"></textarea>
+                        <textarea id="user-input-text" class="w-full bg-transparent border-b border-yellow-900/50 focus:border-yellow-500 outline-none text-center text-base py-2 resize-none min-h-[80px] placeholder-yellow-600/30 text-yellow-100" placeholder="（請訴說您的疑惑...）"></textarea>
                     </div>
                     <div class="pb-4 shrink-0">
                         <button onclick="confirmInput()" class="w-full py-4 bg-yellow-600 text-black font-bold rounded-lg hover:bg-yellow-500 transition-all uppercase tracking-widest shadow-xl">
@@ -411,11 +439,11 @@
                         <div class="card-inner">
                             <div class="card-title text-center font-bold text-xs mb-1 border-b border-current pb-1" id="card-main-title">PROPHECY</div>
                             <div id="card-art-final"></div>
-                            <div class="flex-1 text-left overflow-hidden">
+                            <div class="flex-1 text-left overflow-hidden flex flex-col">
                                <div class="text-[9px] font-bold uppercase mb-1" id="card-topic-label"></div>
-                               <div class="text-[8px] leading-tight text-justify italic font-serif" id="card-summary" style="display: -webkit-box; -webkit-box-orient: vertical; overflow: hidden;"></div>
+                               <div class="text-[8px] leading-tight text-justify italic font-serif" id="card-summary" ></div>
                             </div>
-                            <div class="mt-2 pt-1 border-t border-dotted border-current flex justify-between items-end opacity-70">
+                            <div class="mt-auto pt-1 border-t border-dotted border-current flex justify-between items-end opacity-70">
                                 <div class="text-[6px] font-mono text-left">
                                     ID: <span id="card-session-id"></span><br>
                                     DATE: <span id="card-date"></span>
@@ -431,7 +459,7 @@
                     <h3 class="text-yellow-500 font-bold text-center text-xs mb-3">專屬命運之卡已產生。</h3>
                     <div class="flex gap-2">
                         <button onclick="downloadCard()" id="download-btn" class="flex-1 py-3 bg-blue-600 text-white font-bold rounded-lg text-xs shadow-lg active:scale-95 transition-transform">
-                            💾 取得命運卡
+                            💾 取得命運卡 (*存圖檔)
                         </button>
                         <button onclick="resetApp()" class="flex-1 py-3 border border-yellow-600 text-yellow-500 font-bold rounded-lg text-xs active:scale-95 transition-transform">
                             🌀 重啟脈動
@@ -650,6 +678,7 @@
             
             const aiReply = await fetchAIResponse(userText, selectedTopic);
             const persona = oraclePersonas[currentOracle];
+
             const artPrompt = `Minimalist symbolic icon representing ${selectedTopic}. Style: ${persona.style}. High contrast, mystical. NO TEXT.`;
             
             const resultImg = await fetchImageWithRetry(artPrompt);
