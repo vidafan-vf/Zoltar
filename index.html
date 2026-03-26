@@ -207,7 +207,7 @@
             color: #f1d592;
         }
         .style-zoltar .card-inner { border: 2px dashed #d4af37; padding: 10px; height: 100%; }
-        .style-zoltar .card-title { font-family: 'Orbitron'; color: #ff0000; text-shadow: 0 0 5px #ff0000; font-size: 14px; text-align: center; margin-bottom: 10px; border-bottom: 1px solid #d4af37; }
+        .style-zoltar .card-title { font-family: 'Orbitron'; color: #ff0000; text-shadow: 0 0 5px #ff0000; font-size: 14px; text-align: center; margin-bottom: 10px; border-bottom: 1px solid #d4af37; padding-bottom: 10px; /* 向上移動感，增加與線的距離 */}
 
         /* 2. 祭司: 古文明泥板 */
         .style-priest {
@@ -218,8 +218,14 @@
             color: #3e2723;
             border-radius: 4px;
         }
-        .style-priest .card-inner { border: 1px solid rgba(0,0,0,0.2); height: 100%; box-shadow: inset 0 0 20px rgba(0,0,0,0.1); }
-        .style-priest .card-title { font-weight: bold; text-align: center; letter-spacing: 0.2em; border-bottom: 2px solid #8b4513; margin-bottom: 10px; padding-bottom: 4px; }
+        .style-priest .card-inner { 
+			/* 移除背景點狀裝飾，確保色彩一致 */
+			background: transparent !important;
+			border: 1px solid rgba(0,0,0,0.2); 
+			height: 100%; 
+			box-shadow: none !important; /* 陰影有時也會導致截圖色偏 */
+		}
+		.style-priest .card-title { font-weight: bold; text-align: center; letter-spacing: 0.2em; border-bottom: 2px solid #8b4513; margin-bottom: 10px; padding-bottom: 10px; /* 向上移動感，增加與線的距離 */}
 
 		/* 3. 李淳風: 中式水墨宣紙 - 修正版：標題置中 */
 		.style-li {
@@ -244,7 +250,7 @@
 			text-align: center;
 			border-bottom: 2px solid #222; 
 			margin-bottom: 8px; 
-			padding-bottom: 4px;
+			padding-bottom: 10px;
 			letter-spacing: 0.15em;
 			font-size: 14px;
 			position: static; /* 移除原本的 absolute */
@@ -270,7 +276,7 @@
         }
         .style-oracle .card-inner { border: 1px solid #00f2ff33; height: 100%; position: relative; overflow: hidden; }
         .style-oracle .card-inner::before { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0, 242, 255, 0.05) 3px); pointer-events: none; }
-        .style-oracle .card-title { font-family: 'Orbitron'; font-size: 10px; border: 1px solid #00f2ff; display: inline-block; padding: 2px 8px; margin-bottom: 10px; }
+        .style-oracle .card-title { font-family: 'Orbitron'; font-size: 10px; border: 1px solid #00f2ff; display: inline-block; padding: 2px 8px; margin-bottom: 10px; padding-bottom: 10px; /* 向上移動感，增加與線的距離 */}
 
         .stage-container {
             flex: 1;
