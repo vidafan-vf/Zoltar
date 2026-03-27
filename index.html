@@ -558,7 +558,7 @@
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ instances: [{ prompt: prompt }], parameters: { sampleCount: 1 } })
-						console.log("正在請求的完整路徑:", targetUrl);
+						
                     });
                     if (response.status === 429) { await new Promise(r => setTimeout(r, 2000 * (i + 1))); continue; }
                     const result = await response.json();
