@@ -1,0 +1,825 @@
+﻿<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Zoltar & the Prophets | AI Fortune Teller Prototype</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 html2canvas 以實現存檔功能 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --gold: #d4af37;
+            --gold-light: #f1d592;
+            --dark-bg: #050505;
+            --glass: rgba(255, 255, 255, 0.03);
+        }
+        body {
+            background-color: var(--dark-bg);
+            color: #e5e7eb;
+            font-family: 'Noto Serif TC', serif;
+            overflow: hidden;
+            height: 100vh;
+            height: -webkit-fill-available;
+        }
+        .special-font { font-family: 'Orbitron', sans-serif; }
+        
+        .glass-panel {
+            background: var(--glass);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(212, 175, 55, 0.3);
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
+        }
+        .zoltar-cabinet {
+            border: 8px double var(--gold);
+            position: relative;
+        }
+        .zoltar-cabinet::before {
+            content: "";
+            position: absolute;
+            top: -20px; left: 50%;
+            transform: translateX(-50%);
+            border-left: 30px solid transparent;
+            border-right: 30px solid transparent;
+            border-bottom: 20px solid var(--gold);
+        }
+
+        @keyframes pulse-gold {
+            0%, 100% { box-shadow: 0 0 15px rgba(212, 175, 55, 0.2); }
+            50% { box-shadow: 0 0 40px rgba(212, 175, 55, 0.5); }
+        }
+        .pulse-active { animation: pulse-gold 3s infinite; }
+        
+        .fade-in { animation: fadeIn 0.6s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .scanline {
+            width: 100%; height: 2px;
+            background: rgba(212, 175, 55, 0.1);
+            position: absolute;
+            animation: scan 4s linear infinite;
+        }
+        @keyframes scan { from { top: 0; } to { top: 100%; } }
+
+        @keyframes card-out {
+            0% { transform: translateY(-100%); opacity: 0; }
+            100% { transform: translateY(0); opacity: 1; }
+        }
+        .print-animation { animation: card-out 2s ease-out forwards; }
+
+        .oracle-img-container {
+            width: 100%;
+            height: 120px;
+            background-size: cover;
+            background-position: center 20%;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            position: relative;
+            overflow: hidden;
+            border: 1px solid rgba(212, 175, 55, 0.3);
+            transition: filter 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #111;
+        }
+
+        .mic-wave {
+            display: inline-flex;
+            align-items: center;
+            gap: 2px;
+            height: 12px;
+        }
+        .mic-wave span {
+            width: 2px;
+            height: 100%;
+            background: var(--gold);
+            animation: wave 1s ease-in-out infinite;
+        }
+        @keyframes wave {
+            0%, 100% { height: 40%; }
+            50% { height: 100%; }
+        }
+
+        .loading-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(0,0,0,0.85);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            <!--Vida gap: 8px;  -->
+        }
+
+        .oracle-card-disabled {
+            cursor: not-allowed !important;
+            filter: grayscale(1);
+            opacity: 0.5;
+        }
+
+		/* 確保卡片容器定位與溢出控制 */
+		.gold-card-base {
+			position: relative; /* 必要：讓底部資訊能相對於它定位 */
+			width: 240px;
+			height: 380px;
+			display: flex;
+			flex-direction: column;
+			padding: 10px 14px;
+			box-sizing: border-box;
+			overflow: hidden; /* 確保內容太長時不會撐開卡片 */
+		}
+
+		/* 新增：中間內容的包裝層，用來跟底部隔離 */
+		.card-main-content {
+			flex: 1;
+			display: flex;
+			flex-direction: column;
+			margin-bottom: 40px; /* 重要：留出空間給底部的固定資訊，防止重疊 */
+			overflow: hidden;
+		}
+
+		/* 修改：底部資訊改為絕對定位 */
+		.card-footer-fixed {
+			position: absolute;
+			bottom: 12px;
+			left: 14px;
+			right: 14px;
+			height: 32px;
+			border-top: 1px dotted currentColor;
+			display: flex;
+			justify-content: space-between;
+			align-items: flex-end;
+			padding-top: 4px;
+			background: transparent;
+		}
+		
+        /* 1. Zoltar: 復古嘉年華 */
+        .style-zoltar {
+            background: linear-gradient(135deg, #4a1a1a 0%, #2a0a0a 100%);
+            border: 4px solid #d4af37;
+            color: #f1d592;
+        }
+        .style-zoltar .card-inner { border: 2px dashed #d4af37; padding: 10px; height: 100%; }
+        .style-zoltar .card-title { font-family: 'Orbitron'; color: #ff0000; text-shadow: 0 0 5px #ff0000; font-size: 14px; text-align: center; margin-bottom: 10px; border-bottom: 1px solid #d4af37; padding-bottom: 10px; /* 向上移動感，增加與線的距離 */}
+
+        /* 2. 祭司: 古文明泥板 */
+        .style-priest {
+            background: #d2b48c; /* 沙色背景 */
+            background-image: radial-gradient(circle, rgba(0,0,0,0.1) 1px, transparent 1px);
+            background-size: 20px 20px;
+            border: 6px solid #8b4513;
+            color: #3e2723;
+            border-radius: 4px;
+        }
+        .style-priest .card-inner { 
+			/* 移除背景點狀裝飾，確保色彩一致 */
+			background: transparent !important;
+			border: 1px solid rgba(0,0,0,0.2); 
+			height: 100%; 
+			box-shadow: none !important; /* 陰影有時也會導致截圖色偏 */
+		}
+		.style-priest .card-title { font-weight: bold; text-align: center; letter-spacing: 0.2em; border-bottom: 2px solid #8b4513; margin-bottom: 10px; padding-bottom: 10px; /* 向上移動感，增加與線的距離 */}
+
+		/* 3. 李淳風: 中式水墨宣紙 - 修正版：標題置中 */
+		.style-li {
+			background: #f4f1ea !important;
+			border: 2px solid #222;
+			color: #111 !important;
+		}
+
+		.style-li .card-inner { 
+			border: 1px solid #222; 
+			height: 100%; 
+			padding: 10px;
+			background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" opacity="0.03"><path d="M50 0 L100 50 L50 100 L0 50 Z" fill="black"/></svg>');
+			display: flex;
+			flex-direction: column;
+		}
+
+		/* 標題改為橫排、置中，位於圖片上方 */
+		.style-li .card-title { 
+			font-family: 'Noto Serif TC', serif; 
+			font-weight: 900; 
+			text-align: center;
+			border-bottom: 2px solid #222; 
+			margin-bottom: 8px; 
+			padding-bottom: 10px;
+			letter-spacing: 0.15em;
+			font-size: 14px;
+			position: static; /* 移除原本的 absolute */
+			height: auto;     /* 移除原本固定的 120px */
+			writing-mode: horizontal-tb; /* 確保為橫向 */
+		}
+
+		.style-li .card-summary-box { 
+			padding-right: 0; /* 移除原本為了避開右側直書標題的間距 */
+		}
+
+		/* 讓圖片區域也帶有一點水墨邊界感 */
+		.style-li #card-art-final {
+			border: 1px solid #444;
+			box-shadow: inset 0 0 10px rgba(0,0,0,0.1);
+		}
+        /* 4. 先知: 賽博數位 */
+        .style-oracle {
+            background: #000;
+            border: 2px solid #00f2ff;
+            color: #00f2ff;
+            box-shadow: 0 0 20px #00f2ff55;
+        }
+        .style-oracle .card-inner { border: 1px solid #00f2ff33; height: 100%; position: relative; overflow: hidden; }
+        .style-oracle .card-inner::before { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0, 242, 255, 0.05) 3px); pointer-events: none; }
+        .style-oracle .card-title { font-family: 'Orbitron'; font-size: 10px; border: 1px solid #00f2ff; display: inline-block; padding: 2px 8px; margin-bottom: 10px; padding-bottom: 10px; /* 向上移動感，增加與線的距離 */}
+
+        .stage-container {
+            flex: 1;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+			scrollbar-width: none;
+            <!--Vida webkit-overflow-scrolling: touch; -->
+        }
+    </style>
+</head>
+<body class="h-screen w-screen flex items-center justify-center p-4">
+
+    <div id="main-frame" class="w-full max-w-2xl h-full max-h-[850px] zoltar-cabinet glass-panel rounded-t-3xl overflow-hidden flex flex-col items-center p-1 transition-all duration-700">
+        <div class="scanline"></div>
+        
+        <div class="w-full text-center py-4 border-b border-yellow-900/30">
+            <h1 class="special-font text-xl tracking-[0.5em] text-yellow-500">ZOLTAR & the PROPHETS</h1>
+        </div>
+
+        <div class="flex-1 w-full flex flex-col items-center p-4 relative overflow-hidden">
+            
+            <!-- Step 1: Initial -->
+            <div id="step-1" class="text-center flex flex-col items-center justify-center h-full">
+                <div class="relative mb-12">
+                    <div class="w-40 h-40 rounded-full border-2 border-yellow-900/50 flex items-center justify-center pulse-active">
+                        <span class="text-6xl">👁️</span>
+                    </div>
+                </div>
+                <h2 class="text-lg mb-4 text-yellow-200">偵測到生命脈動...</h2>
+                <button onclick="nextStep(2)" class="px-10 py-4 border border-yellow-600 text-yellow-500 hover:bg-yellow-600 hover:text-black transition-all font-bold tracking-widest">
+                    觸碰螢幕開啟連結
+                </button>
+            </div>
+
+            <!-- Step 2: Select Oracle 🔮🔱☯️📡-->
+            <div id="step-2" class="hidden stage-container fade-in">
+                <div class="bg-black/40 p-4 rounded-lg mb-4 border border-yellow-900/20">
+                    <p id="hook-text" class="text-sm italic leading-relaxed text-yellow-100"></p>
+                </div>
+                <div class="grid grid-cols-2 gap-3 mb-4">
+                    <button id="btn-zoltar" onclick="selectOracle('Zoltar')" disabled class="p-3 glass-panel text-left border border-orange-900/40 group transition-all flex flex-col relative overflow-hidden oracle-card-disabled">
+                        <div id="loading-zoltar" class="loading-overlay"><span class="animate-pulse text-orange-400 text-[10px] tracking-widest">暖機中...</span></div>
+                        <div id="img-zoltar" class="oracle-img-container border-orange-900/40 text-4xl" style="background-image: url('style-zoltar.png');"></div>
+                        <h3 class="font-bold text-xs group-hover:text-orange-400 mb-1">Zoltar Original</h3>
+                        <p class="text-[10px] text-orange-100/80 leading-tight">投下一枚硬幣，解鎖經典機械預言。</p>
+                    </button>
+                    <button id="btn-priest" onclick="selectOracle('祭司')" disabled class="p-3 glass-panel text-left border border-yellow-900/40 group transition-all flex flex-col relative overflow-hidden oracle-card-disabled">
+                        <div id="loading-priest" class="loading-overlay"><span class="animate-pulse text-yellow-400 text-[10px] tracking-widest">呼喚中...</span></div>
+                        <div id="img-priest" class="oracle-img-container text-4xl" style="background-image: url('style-priest.png');"></div>
+                        <h3 class="font-bold text-xs group-hover:text-yellow-400 mb-1">蘇美爾祭司</h3>
+                        <p class="text-[10px] text-yellow-100/80 leading-tight">跨越五千年文明，傳遞神祇的泥板啟示。</p>
+                    </button>
+                    <button id="btn-li" onclick="selectOracle('李淳風')" disabled class="p-3 glass-panel text-left border border-red-900/40 group transition-all flex flex-col relative overflow-hidden oracle-card-disabled">
+                        <div id="loading-li" class="loading-overlay"><span class="animate-pulse text-red-400 text-[10px] tracking-widest">推背中...</span></div>
+                        <div id="img-li" class="oracle-img-container border-red-900/40 text-4xl" style="background-image: url('style-li.png');"></div>
+                        <h3 class="font-bold text-xs group-hover:text-red-400 mb-1">李淳風</h3>
+                        <p class="text-[10px] text-red-100/80 leading-tight">觀星算數通今達古，推演大唐至未來的易理。</p>
+                    </button>
+                    <button id="btn-oracle" onclick="selectOracle('先知')" disabled class="p-3 glass-panel text-left border border-blue-900/40 group transition-all flex flex-col relative overflow-hidden oracle-card-disabled">
+                        <div id="loading-oracle" class="loading-overlay"><span class="animate-pulse text-blue-400 text-[10px] tracking-widest">同步中...</span></div>
+                        <div id="img-oracle" class="oracle-img-container border-blue-900/40 text-4xl" style="background-image: url('style-oracle.png');"></div>
+                        <h3 class="font-bold text-xs group-hover:text-blue-300 mb-1">未來先知</h3>
+                        <p class="text-[10px] text-blue-100/80 leading-tight">神經網絡運算中，精準掃描你潛意識的維度。</p>
+                    </button>
+                </div>
+                <div class="text-center">
+                    <p id="load-status" class="text-[10px] text-yellow-600 uppercase tracking-widest">招喚進行中...</p>
+                </div>
+            </div>
+
+            <!-- Step 3: Payment -->
+            <div id="step-3" class="hidden text-center flex flex-col items-center justify-center h-full fade-in">
+                <h2 class="text-2xl mb-2 font-bold text-yellow-500">解鎖時空連結</h2>
+                <div class="bg-white p-4 rounded-xl my-6">
+                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=ZoltarPayment" alt="QR Code" class="w-32 h-32 mb-4">
+                    <button onclick="nextStep(4)" class="w-full px-8 py-3 bg-black text-yellow-500 border border-yellow-500 rounded-full text-sm font-bold">模擬支付成功</button>
+                </div>
+            </div>
+
+            <!-- Step 4: Scenario Selection & Interaction -->
+            <div id="step-4" class="hidden stage-container fade-in">
+                <div class="flex items-center gap-4 mb-6 shrink-0 border-b border-yellow-900/20 pb-4">
+                    <div class="w-14 h-14 rounded-full border-2 border-yellow-500 flex items-center justify-center overflow-hidden bg-black shadow-[0_0_15px_rgba(212,175,55,0.3)]">
+                        <img id="oracle-avatar-img" src="" alt="Oracle" class="w-full h-full object-cover hidden">
+                        <span id="oracle-avatar-fallback" class="text-2xl"></span>
+                    </div>
+                    <div>
+                        <h3 id="oracle-name" class="text-lg font-bold text-yellow-400"></h3>
+                        <div class="flex items-center gap-2">
+                            <span class="text-[8px] text-green-500 special-font">● CONNECTION STABLE</span>
+                            <div class="mic-wave"><span></span><span></span><span></span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="interaction-stage-1" class="flex flex-col gap-4">
+                    <p id="dimension-guide" class="text-sm text-yellow-100/90 mb-2 italic leading-relaxed"></p>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <button onclick="prepareInput('career', '💼 職業轉折')" class="p-5 bg-yellow-900/10 border border-yellow-900/40 rounded-xl text-sm hover:bg-yellow-900/30 text-left transition-all flex items-center justify-between group shadow-sm">
+                            <span class="font-bold">💼 職業轉折</span>
+                            <span class="opacity-0 group-hover:opacity-100 transition-opacity">➔</span>
+                        </button>
+                        <button onclick="prepareInput('creation', '✍️ 創作靈魂')" class="p-5 bg-yellow-900/10 border border-yellow-900/40 rounded-xl text-sm hover:bg-yellow-900/30 text-left transition-all flex items-center justify-between group shadow-sm">
+                            <span class="font-bold">✍️ 創作靈魂</span>
+                            <span class="opacity-0 group-hover:opacity-100 transition-opacity">➔</span>
+                        </button>
+                        <button onclick="prepareInput('property', '🏠 大地預兆')" class="p-5 bg-yellow-900/10 border border-yellow-900/40 rounded-xl text-sm hover:bg-yellow-900/30 text-left transition-all flex items-center justify-between group shadow-sm">
+                            <span class="font-bold">🏠 大地預兆</span>
+                            <span class="opacity-0 group-hover:opacity-100 transition-opacity">➔</span>
+                        </button>
+                        <button onclick="prepareInput('other', '🌀 跨維自我')" class="p-5 bg-yellow-900/10 border border-yellow-900/40 rounded-xl text-sm hover:bg-yellow-900/30 text-left transition-all flex items-center justify-between group shadow-sm">
+                            <span class="font-bold">🌀 跨維自我</span>
+                            <span class="opacity-0 group-hover:opacity-100 transition-opacity">➔</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div id="interaction-stage-2" class="hidden flex-1 flex flex-col gap-4">
+                    <div class="flex-1 bg-black/60 border border-yellow-900/30 rounded-xl p-6 flex flex-col items-center text-center overflow-y-auto min-h-[250px]">
+                        <div id="mic-status" class="mb-4 shrink-0">
+                            <div class="w-12 h-12 bg-red-600/20 rounded-full flex items-center justify-center animate-pulse border border-red-500 mx-auto">
+                                <span class="text-xl">🎙️</span>
+                            </div>
+                            <p class="text-[10px] text-red-400 mt-2 font-bold tracking-widest">LISTENING...</p>
+                        </div>
+                        <div id="persona-chat-container"></div>
+                        <h4 id="input-prompt-title" class="text-lg text-yellow-500 mb-2 shrink-0 font-bold"></h4>
+                        <textarea id="user-input-text" class="w-full bg-transparent border-b border-yellow-900/50 focus:border-yellow-500 outline-none text-center text-base py-2 resize-none min-h-[80px] placeholder-yellow-600/30 text-yellow-100" placeholder="（請訴說您的疑惑...）"></textarea>
+                    </div>
+                    <div class="pb-4 shrink-0">
+                        <button onclick="confirmInput()" class="w-full py-4 bg-yellow-600 text-black font-bold rounded-lg hover:bg-yellow-500 transition-all uppercase tracking-widest shadow-xl">
+                            聆聽命運箴言 (Submit)
+                        </button>
+                    </div>
+                </div>
+
+                <div id="interaction-stage-3" class="hidden flex-1 flex flex-col justify-center items-center text-center">
+                    <div class="relative w-24 h-24 mb-6">
+                        <div class="absolute inset-0 border-4 border-yellow-500/10 rounded-full"></div>
+                        <div class="absolute inset-0 border-4 border-t-yellow-500 rounded-full animate-spin"></div>
+                        <div class="absolute inset-0 flex items-center justify-center text-3xl">🔮</div>
+                    </div>
+                    <p id="thinking-status" class="text-yellow-400 animate-pulse text-sm font-bold tracking-widest">正在撥開時空的迷霧...</p>
+                </div>
+            </div>
+
+            <!-- Step 5: Result -->
+            <div id="step-5" class="hidden stage-container fade-in">
+                <h2 class="text-lg mb-4 font-bold text-yellow-500 text-center tracking-widest">預言已經揭示</h2>
+                <div class="bg-yellow-900/10 border border-yellow-900/40 p-5 rounded-xl mb-6 flex flex-col items-center shadow-inner">
+                    <div id="result-art-preview" class="w-full h-48 bg-black/40 rounded-lg mb-4 bg-center bg-cover border border-yellow-900/30 flex items-center justify-center overflow-hidden">
+                        <span id="image-load-indicator" class="text-xs text-yellow-600 animate-pulse">正在顯影...</span>
+                    </div>
+                    <p id="summary-content" class="italic text-yellow-100 text-sm leading-relaxed text-center"></p>
+                </div>
+                <button onclick="startPrinting()" class="w-full py-4 bg-yellow-600 text-black font-bold rounded-lg hover:bg-yellow-500 transition-all shadow-lg tracking-widest">取得專屬命運小卡 (PRINT|DOWNLOAD)</button>
+            </div>
+
+            <!-- Step 6: Printing -->
+            <div id="step-6" class="hidden stage-container flex flex-col justify-between h-full fade-in overflow-hidden">
+                <div id="print-view-box" class="flex-1 flex flex-col items-center justify-center py-2 overflow-hidden">
+                    <div class="mb-2 special-font text-yellow-500 text-[10px] tracking-widest animate-pulse uppercase">Printing Fate...</div>
+					<div id="fate-card-capture" class="gold-card-base print-animation shrink-0">
+						<div class="card-main-content">
+							<div class="card-title text-center font-bold text-xs mb-1 border-b border-current pb-1" id="card-main-title">PROPHECY</div>
+							
+							<div id="card-art-final" class="w-full bg-gray-200 mb-2 overflow-hidden flex-shrink-0" style="height: 140px;">
+								<img src="" id="capture-image-src" class="w-full h-full object-cover">
+							</div>
+							<div class="text-[9px] font-bold uppercase mb-1" id="card-topic-label"></div>
+							<div id="card-summary" class="italic font-serif" style="display: block; height: 130px; overflow: hidden; font-size: 8pt; line-height: 1.4; text-align: justify;"></div>
+							<!--
+							#前一版堪用
+							<div id="card-summary" class="italic font-serif" style="display: block; width: 100%; min-height: 100px; font-size: 9pt; line-height: 1.5; overflow: hidden;"></div>
+							#自己控制，不透過script
+							<div id="card-summary" class="text-[8px] leading-tight italic font-serif" style="display: -webkit-box; -webkit-line-clamp: 10; -webkit-box-orient: vertical; overflow: hidden;"></div>
+							-->
+						</div>
+
+						<div class="card-footer-fixed opacity-70">
+							<div class="text-[6px] font-mono leading-none">
+								ID: <span id="card-session-id"></span><br>
+								<span class="mt-0.5 inline-block">DATE: <span id="card-date"></span></span>
+							</div>
+							<div class="text-lg leading-none" id="card-oracle-icon"></div>
+						</div>
+					</div>
+                </div>
+                
+                <!-- 控制面版改為相對佈局，收縮間距 -->
+                <div id="print-finished" class="hidden fade-in w-full bg-black/60 backdrop-blur-md p-4 border-t border-yellow-600/30 rounded-t-2xl mb-2">
+                    <h3 class="text-yellow-500 font-bold text-center text-xs mb-3">專屬命運之卡已產生。</h3>
+                    <div class="flex gap-2">
+                        <button onclick="downloadCard()" id="download-btn" class="flex-1 py-3 bg-blue-600 text-white font-bold rounded-lg text-xs shadow-lg active:scale-95 transition-transform">
+                            💾 取得命運卡 (*存圖檔)
+                        </button>
+                        <button onclick="resetApp()" class="flex-1 py-3 border border-yellow-600 text-yellow-500 font-bold rounded-lg text-xs active:scale-95 transition-transform">
+                            🌀 重啟脈動
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="w-full h-8 bg-yellow-900/20 border-t border-yellow-900/30 flex items-center justify-center px-6 text-[8px] text-yellow-600 special-font">
+            REAL-TIME FATE ENGINE ACTIVE v2.1
+        </div>
+    </div>
+
+    <script>
+        let currentOracle = "";
+        let selectedTopic = "";
+        let currentResultImage = "";
+        const apiKey = "AIzaSyAiVQ2pq48s0xFiyA78NtIdjSi8JJmn8wo"; 
+
+        const oracleImages = { "祭司": "", "李淳風": "", "Zoltar": "", "先知": "" };
+        const oracleEmoji = { "祭司": "🔱", "李淳風": "☯️", "Zoltar": "🔮", "先知": "📡" };
+
+        const oraclePersonas = {
+            "祭司": {
+                cardStyle: "style-priest",
+                cardTitle: "SUMERIAN ORACLE",
+                description: "蘇美爾祭司，精通蘇美文化的占星術與天文觀測，將數學、星軌觀測與神學意志融合。",
+                style: "Ancient Mesopotamian, stone textures, warm ember lighting, upper body portrait, centered.",
+                guide: "「凡人，眾神正透過星軌俯瞰。你想在哪個領域尋求神諭？」",
+                greetings: {
+                    "💼 職業轉折": "「凡人，你所求的權力與勞動，早已刻在五千年前的泥板上... 說出你的掙扎。」",
+                    "✍️ 創作靈魂": "「靈感是神祇吐出的煙霧，你察覺到了哪一絲神性？描述你的幻象。」",
+                    "🏠 大地預兆": "「土地是有記憶的，你想在何處紮根？告訴我那片土地的氣息。」",
+                    "🌀 跨維自我": "「影子比實體更真實。在另一個時空，你正看著現在的自己嗎？」"
+                }
+            },
+            "李淳風": {
+                cardStyle: "style-li",
+                cardTitle: "大唐推背圖密鑰",
+                description: "唐代天文學家，以古代觀星為基底，結合當下天時、地理氣象等自然因素演繹易理。",
+                style: "Traditional Chinese Ink wash, star maps, upper body portrait, centered composition.",
+                guide: "「天地盈虛，與時消息。閣下想卜問哪一門運勢？」",
+                greetings: {
+                    "💼 職業轉折": "「官祿宮雲氣翻騰，此乃變動之兆。你想問的是進，還是退？」",
+                    "✍️ 創作靈魂": "「文曲星動，妙筆生花亦需天時。你的筆尖此刻為何而顫動？」",
+                    "🏠 大地預兆": "「尋龍點穴，地靈方能人傑。你要尋覓的方位，可有山河環繞？」",
+                    "🌀 跨維自我": "「莊周夢蝶，孰為真，孰為幻？你在夢境中見到了什麼預兆？」"
+                }
+            },
+            "Zoltar": {
+                cardStyle: "style-zoltar",
+                cardTitle: "ZOLTAR SAYS...",
+                description: "經典美式占卜機台。體現 80-90 年代流行文化意象，語氣懷舊、幽默且輕鬆。",
+                style: "Vintage carnival, neon wood grain, upper body portrait, centered.",
+                guide: "「歡迎，幸運兒！選擇一個類別，Zoltar 將為你揭開驚喜！」",
+                greetings: {
+                    "💼 職業轉折": "「想要換個新跑道嗎？投下一枚硬幣，告訴 Zoltar 你的雄心壯志！」",
+                    "✍️ 創作靈魂": "「藝術是瘋狂的火花！嘿，藝術家，你的大腦正在醞釀什麼傑作？」",
+                    "🏠 大地預兆": "「家是心靈的港灣，你想在世界的哪個角落蓋起你的城堡？」",
+                    "🌀 跨維自我": "「未來的你正在對現在的你眨眼！你想對那個未知的自己說什麼？」"
+                }
+            },
+            "先知": {
+                cardStyle: "style-oracle",
+                cardTitle: "NEURAL PREDICTION",
+                description: "未來的數位先知。善用當前網路流行文化與迷因術語進行高維度預算。",
+                style: "Hyper-futuristic, neural networks, upper body portrait, centered composition.",
+                guide: "「正在解析你的元數據... 選擇一個你想要探索的命運線程。」",
+                greetings: {
+                    "💼 職業轉折": "「正在模擬你的職業演算法... 偵測到路徑分支。請提供你的核心參數。」",
+                    "✍️ 創作靈魂": "「創造力是人類唯一的非線性邏輯。你的心智矩陣正在輸出什麼代碼？」",
+                    "🏠 大地預兆": "「正在定位地理座標... 空間資產轉換率計算中。你的理想生存環境為何？」",
+                    "🌀 跨維自我": "「偵測到平行時空的疊加態。請輸入你對另一個生命版本的觀察。」"
+                }
+            }
+        };
+
+        async function fetchAIResponse(userText, topic) {
+            const persona = oraclePersonas[currentOracle];
+            const now = new Date();
+            const timeStr = `${now.getHours()}:${now.getMinutes()}`;
+            const dateStr = now.toLocaleDateString();
+
+            let systemPrompt = `你現在扮演${currentOracle}。${persona.description}\n`;
+            systemPrompt += `任務：針對使用者的主題「${topic}」提供占卜回覆。回覆應當「正面但隱誨」，充滿娛樂性與藝術感，避免明確的指示，而是給予引導與啟發。\n`;
+            
+            if (currentOracle === "祭司") {
+                systemPrompt += "語氣應莊嚴且古老，提及星軌運動、神之吐息或古老的算數神學。";
+            } else if (currentOracle === "Zoltar") {
+                systemPrompt += "語氣應像 80 年代遊樂園機台，熱情、帶點幽默感，適合大眾娛樂，像在跟老朋友聊天。";
+            } else if (currentOracle === "李淳風") {
+                systemPrompt += `語氣應儒雅且深奧。請考量「天時地利」：當前日期是 ${dateStr}，時間是 ${timeStr}。提及星宿排列、陰陽消長或自然界氣候對命格的影響。`;
+            } else if (currentOracle === "先知") {
+                systemPrompt += "語氣應帶有賽博龐克感，可以適度融入當前網路流行術語、科技隱喻或網路迷因，將靈性與數位網絡結合。";
+            }
+
+            systemPrompt += "\n回應限制在 120 字內。請根據使用者提供的輸入進行延伸，若無輸入則根據主題進行虛擬觀測。";
+
+            let retries = 5;
+            for (let i = 0; i < retries; i++) {
+                try {
+                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            contents: [{ parts: [{ text: `使用者輸入：${userText || '（使用者在靜靜傾聽你的啟示）'}` }] }],
+                            systemInstruction: { parts: [{ text: systemPrompt }] }
+                        })
+                    });
+                    const result = await response.json();
+                    return result.candidates?.[0]?.content?.parts?.[0]?.text || "雖然你沉默，但我聽見了你呼吸。";
+                } catch (err) {
+                    await new Promise(r => setTimeout(r, 1000 * Math.pow(2, i)));
+                }
+            }
+        }
+
+        async function fetchImageWithRetry(prompt, retries = 3) {
+            for (let i = 0; i < retries; i++) {
+                try {
+                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${apiKey}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ instances: { prompt: prompt }, parameters: { sampleCount: 1 } })
+                    });
+                    if (response.status === 429) { await new Promise(r => setTimeout(r, 2000 * (i + 1))); continue; }
+                    const result = await response.json();
+                    if (result.predictions?.[0]?.bytesBase64Encoded) {
+                        return `data:image/png;base64,${result.predictions[0].bytesBase64Encoded}`;
+                    }
+                } catch (err) {
+                    await new Promise(r => setTimeout(r, 1000 * Math.pow(2, i)));
+                }
+            }
+            return "";
+        }
+
+        async function generatePortraitsSequential() {
+            const configs = [
+                { key: "Zoltar", id: "zoltar", prompt: "Upper body portrait of Zoltar machine, centered, vintage carnival style, dark gold lighting" },
+                { key: "祭司", id: "priest", prompt: "Upper body portrait of an ancient Mesopotamian priest, stone textures, dramatic shadows" },
+                { key: "李淳風", id: "li", prompt: "Upper body portrait of Li Chunfeng Chinese master, ink wash style, mystical atmosphere, no chinese characters" },
+                { key: "先知", id: "oracle", prompt: "Upper body portrait of a futuristic neural AI oracle, neon circuitry, deep blue and teal" }
+            ];
+
+            for (const item of configs) {
+                document.getElementById('load-status').innerText = `正在喚醒 ${item.key}...`;
+                const imgData = await fetchImageWithRetry(item.prompt);
+                
+                const btn = document.getElementById(`btn-${item.id}`);
+                const loading = document.getElementById(`loading-${item.id}`);
+                const imgDiv = document.getElementById(`img-${item.id}`);
+
+                if (imgData) {
+                    oracleImages[item.key] = imgData;
+                    imgDiv.style.backgroundImage = `url(${imgData})`;
+                    imgDiv.innerText = ""; 
+                }
+                
+                loading.classList.add('hidden');
+                btn.disabled = false;
+                btn.classList.remove('oracle-card-disabled');
+                await new Promise(r => setTimeout(r, 500));
+            }
+            document.getElementById('load-status').innerText = "導師們已就位";
+        }
+
+        function nextStep(n) {
+            document.querySelectorAll('#main-frame > div > div[id^="step-"], #main-frame > div > .stage-container').forEach(d => d.classList.add('hidden'));
+            document.getElementById(`step-${n}`).classList.remove('hidden');
+            if (n === 2) typeEffect('hook-text', "能量匯聚中... 請在這多維時空中，選擇您的導師。");
+            if (n === 4) {
+                const avatarImg = document.getElementById('oracle-avatar-img');
+                const avatarFallback = document.getElementById('oracle-avatar-fallback');
+                
+                if (oracleImages[currentOracle]) {
+                    avatarImg.src = oracleImages[currentOracle];
+                    avatarImg.classList.remove('hidden');
+                    avatarFallback.classList.add('hidden');
+                } else {
+                    avatarImg.classList.add('hidden');
+                    avatarFallback.innerText = oracleEmoji[currentOracle];
+                    avatarFallback.classList.remove('hidden');
+                }
+                
+                document.getElementById('oracle-name').innerText = currentOracle;
+                document.getElementById('dimension-guide').innerText = oraclePersonas[currentOracle].guide;
+                document.getElementById('interaction-stage-1').classList.remove('hidden');
+                document.getElementById('interaction-stage-2').classList.add('hidden');
+                document.getElementById('interaction-stage-3').classList.add('hidden');
+            }
+        }
+		
+		<!-- 如要跳過付費, nextStep(3) 改 nextStep(4)
+        function selectOracle(type) { currentOracle = type; nextStep(3); }
+
+        function prepareInput(topic, topicLabel) {
+            selectedTopic = topicLabel;
+            document.getElementById('interaction-stage-1').classList.add('hidden');
+            document.getElementById('interaction-stage-2').classList.remove('hidden');
+            document.getElementById('input-prompt-title').innerText = topicLabel;
+            
+            const chatContainer = document.getElementById('persona-chat-container');
+            chatContainer.innerHTML = "";
+            const greeting = oraclePersonas[currentOracle].greetings[topicLabel] || "「請告訴我你的問題...」";
+            chatContainer.innerHTML = `<p id="persona-chat" class="text-sm text-yellow-400 mb-6 px-4 italic fade-in leading-relaxed">${greeting}</p>`;
+            document.getElementById('user-input-text').value = "";
+        }
+
+        async function confirmInput() {
+            const userText = document.getElementById('user-input-text').value;
+            document.getElementById('interaction-stage-2').classList.add('hidden');
+            document.getElementById('interaction-stage-3').classList.remove('hidden');
+            
+            const aiReply = await fetchAIResponse(userText, selectedTopic);
+            const persona = oraclePersonas[currentOracle];
+
+            const artPrompt = `Minimalist symbolic icon representing ${selectedTopic}. Style: ${persona.style}. High contrast, mystical. NO TEXT.`;
+            
+            const resultImg = await fetchImageWithRetry(artPrompt);
+            currentResultImage = resultImg;
+
+            document.getElementById('summary-content').innerText = aiReply;
+            const previewDiv = document.getElementById('result-art-preview');
+            
+            if (resultImg) {
+                previewDiv.style.backgroundImage = `url(${resultImg})`;
+                previewDiv.innerHTML = "";
+            } else {
+                previewDiv.innerHTML = `<span class="text-4xl opacity-50">${oracleEmoji[currentOracle]}</span>`;
+            }
+            
+            document.getElementById('card-summary').innerText = aiReply;
+            document.getElementById('card-topic-label').innerText = selectedTopic;
+            
+            setTimeout(() => nextStep(5), 500);
+        }
+
+        function startPrinting() {
+            nextStep(6);
+            
+            const persona = oraclePersonas[currentOracle];
+            const cardCapture = document.getElementById('fate-card-capture');
+            
+            // 清除之前的風格類名並加上新的
+            cardCapture.className = `gold-card-base print-animation ${persona.cardStyle}`;
+            document.getElementById('card-main-title').innerText = persona.cardTitle;
+            document.getElementById('card-oracle-icon').innerText = oracleEmoji[currentOracle];
+            
+            const cardArtFinal = document.getElementById('card-art-final');
+            if (currentResultImage) {
+                cardArtFinal.style.backgroundImage = `url(${currentResultImage})`;
+                cardArtFinal.innerHTML = "";
+            } else {
+                cardArtFinal.innerHTML = `<span class="text-6xl opacity-20">${oracleEmoji[currentOracle]}</span>`;
+            }
+            
+            document.getElementById('card-session-id').innerText = Math.random().toString(16).substring(2, 8).toUpperCase();
+            document.getElementById('card-date').innerText = new Date().toLocaleDateString();
+
+            setTimeout(() => {
+                document.getElementById('print-finished').classList.remove('hidden');
+                // 不要使用 opacity-40，改用一個純粹的隱藏方式，或者乾脆不對背景做處理
+				//document.getElementById('print-process').classList.add('opacity-40');
+				document.getElementById('print-process').classList.add('hidden'); 
+				document.getElementById('print-finished').classList.remove('hidden');
+				// 確保截取目標的背景是純白不透明
+				document.getElementById('fate-card-capture').style.backgroundColor = "#ffffff";
+            }, 3000);
+        }
+
+		function downloadCard() {
+            const card = document.getElementById('fate-card-capture');
+            const btn = document.getElementById('download-btn');
+            btn.innerText = "生成高清檔中...";
+            btn.disabled = true;
+
+            // 獲取目前的樣式類別，以便在 onclone 中強化背景
+            const currentStyle = Array.from(card.classList).find(c => c.startsWith('style-'));
+
+            html2canvas(card, {
+                scale: 4,
+                useCORS: true,
+                backgroundColor: "#ffffff", // 強制截圖背景為白色，防止黑色滲漏
+                logging: false,
+				width: card.offsetWidth,
+				height: card.offsetHeight,
+                onclone: (clonedDoc) => {
+                    const clonedCard = clonedDoc.getElementById('fate-card-capture');
+                    // 1. 徹底移除克隆體的動畫與濾鏡
+                    clonedCard.style.transform = "none";
+                    clonedCard.style.animation = "none";
+                    clonedCard.style.filter = "none";
+                    clonedCard.style.backdropFilter = "none";
+                    clonedCard.style.boxShadow = "none";
+                    
+                    // 2. 強化克隆體的背景不透明度
+                    // 根據不同的卡片風格，強制設定對應的不透明背景顏色
+                    if (currentStyle === 'style-zoltar') clonedCard.style.background = "#2a0a0a";
+                    else if (currentStyle === 'style-priest') clonedCard.style.background = "#d2b48c";
+                    else if (currentStyle === 'style-li') clonedCard.style.background = "#f4f1ea";
+                    else if (currentStyle === 'style-oracle') clonedCard.style.background = "#000000";
+                    else clonedCard.style.background = "#ffffff";
+                    
+                    // 3. 隱藏克隆體以外的所有父元素，確保環境乾淨
+                    const mainFrame = clonedDoc.getElementById('main-frame');
+                    if (mainFrame) {
+                        mainFrame.style.background = "transparent";
+                        mainFrame.style.boxShadow = "none";
+                        mainFrame.style.border = "none";
+                        mainFrame.style.backdropFilter = "none";
+                    }
+					
+					// 4. 額外保險：強制克隆後的底部也是絕對定位
+					const footer = clonedCard.querySelector('.card-footer-fixed');
+					if (footer) {
+						footer.style.position = 'absolute';
+						footer.style.bottom = '12px';
+					}
+                }
+            }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = `Zoltar_Fate_${Date.now()}.png`;
+                link.href = canvas.toDataURL('image/png', 1.0);
+                link.click();
+                btn.innerText = "💾 取得命運卡";
+                btn.disabled = false;
+            }).catch(e => {
+                console.error(e);
+                btn.innerText = "出錯請重試";
+                btn.disabled = false;
+            });
+		}
+		
+        function downloadCard_org() {
+            const card = document.getElementById('fate-card-capture');
+            // 由於 html2canvas 捕捉時會受動畫影響，我們需要捕捉最終狀態
+            html2canvas(card, {
+                backgroundColor: null,
+                scale: 3,
+                useCORS: true,
+                logging: false
+            }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = `${currentOracle}-FateCard-${Date.now()}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            });
+        }
+
+        function resetApp() { 
+            // 重新初始化狀態變數
+            currentOracle = "";
+            selectedTopic = "";
+            currentResultImage = "";
+            
+            // 重置 UI 元素
+            document.getElementById('user-input-text').value = "";
+            document.getElementById('print-finished').classList.add('hidden');
+            document.getElementById('persona-chat-container').innerHTML = "";
+            
+            // 回到第一步 (Step 1)
+            nextStep(1);
+        }
+
+        function resetApp_org() {
+            currentOracle = "";
+            selectedTopic = "";
+            currentResultImage = "";
+            document.getElementById('print-finished').classList.add('hidden');
+            document.getElementById('print-process').classList.remove('opacity-40');
+            document.getElementById('user-input-text').value = "";
+            document.getElementById('persona-chat-container').innerHTML = "";
+            nextStep(1);
+        }
+
+        function typeEffect(id, text) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.innerText = "";
+            let i = 0;
+            const timer = setInterval(() => {
+                el.innerText += text[i];
+                if (++i >= text.length) clearInterval(timer);
+            }, 40);
+        }
+
+        window.onload = generatePortraitsSequential;
+    </script>
+</body>
+</html>
