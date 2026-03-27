@@ -549,6 +549,24 @@
             }
         }
 
+		async function fetchImageWithRetry(prompt, retries = 3) {
+			// 1. 修正域名為 image.pollinations.ai (這是最穩定的)
+			const baseUrl = "https://image.pollinations.ai/prompt/";
+			
+			// 2. 格式化 Prompt
+			const encodedPrompt = encodeURIComponent(prompt);
+			const seed = Math.floor(Math.random() * 1000000);
+			
+			// 3. 組合網址 (移除 model=flux，有時特定模型會觸發權限檢查)
+			const imageUrl = `${baseUrl}${encodedPrompt}?width=512&height=512&nologo=true&seed=${seed}`;
+
+			// 4. 因為是直接回傳網址給 <img> 標籤，我們不需要 fetch 它
+			// 這樣可以完全避開 401 或 CORS 預檢問題
+			console.log("Generating Image URL:", imageUrl);
+			return imageUrl; 
+		}
+		
+		/*--
         async function fetchImageWithRetry(prompt, retries = 3) {
             for (let i = 0; i < retries; i++) {
                 try {
@@ -568,6 +586,8 @@
             }
             return "";
         }
+
+		--*/
 
         async function generatePortraitsSequential() {
             const configs = [
