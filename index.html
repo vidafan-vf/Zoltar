@@ -533,8 +533,9 @@
             let retries = 5;
             for (let i = 0; i < retries; i++) {
                 try {
-						const proxyUrl = "https://corsproxy.io/?"; 
-						const response = await fetch(proxyUrl + encodeURIComponent(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`), {
+						const targetUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+						const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`;
+						const response = await fetch(proxyUrl, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
@@ -554,8 +555,9 @@
         async function fetchImageWithRetry(prompt, retries = 3) {
             for (let i = 0; i < retries; i++) {
                 try {
-						const proxyUrl = "https://corsproxy.io/?"; 
-						const response = await fetch(proxyUrl + encodeURIComponent(`https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${apiKey}`), {
+						const targetUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${apiKey}`;
+						const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`;
+						const response = await fetch(proxyUrl, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ instances: [{ prompt: prompt }], parameters: { sampleCount: 1 } })
