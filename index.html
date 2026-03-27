@@ -534,13 +534,14 @@
             for (let i = 0; i < retries; i++) {
                 try {
 						const proxyUrl = "https://corsproxy.io/?"; 
-						const response = await fetch(proxyUrl + encodeURIComponent(`https://generativelanguage.googleapis.com/v1beta/gemini-2.5-flash:generateContent?key=${apiKey}`), {
+						const response = await fetch(proxyUrl + encodeURIComponent(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`), {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             contents: [{ parts: [{ text: `使用者輸入：${userText || '（使用者在靜靜傾聽你的啟示）'}` }] }],
                             systemInstruction: { parts: [{ text: systemPrompt }] }
                         })
+
                     });
 					const result = await response.json();
                     return result.candidates?.[0]?.content?.parts?.[0]?.text || "雖然你沉默，但我聽見了你呼吸。";
@@ -554,7 +555,7 @@
             for (let i = 0; i < retries; i++) {
                 try {
 						const proxyUrl = "https://corsproxy.io/?"; 
-						const response = await fetch(proxyUrl + encodeURIComponent(`https://generativelanguage.googleapis.com/v1beta/imagen-4.0-generate-001:predict?key=${apiKey}`), {
+						const response = await fetch(proxyUrl + encodeURIComponent(`https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${apiKey}`), {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ instances: [{ prompt: prompt }], parameters: { sampleCount: 1 } })
